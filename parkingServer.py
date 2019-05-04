@@ -8,7 +8,13 @@ class MyServer(BaseHTTPRequestHandler):
     used_keys = []
     allowed_commands = ['take', 'store']
     can_continue = True
-    def _set_headers(self, code, headers = {}):
+
+    def __response_error(self, code, error_message):
+        self.send_response(code)
+        self.send_header('Error', error_message)
+        self.end_headers()
+
+    def __response(self, code, headers = {}):
         self.send_response(code)
         for header, value in headers.items():
             self.send_header(header, value)
@@ -16,11 +22,11 @@ class MyServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         print('GET')
-        self._set_headers(405)
+        self.__response(405)
 
     def do_HEAD(self):
         print('HEAD')
-        self._set_headers(405)
+        self.__response(405)
         
     def do_POST(self):
         self.__validate_headers()
@@ -42,7 +48,7 @@ class MyServer(BaseHTTPRequestHandler):
         try:
             content = json.loads(self.rfile.read(content_length))
         except:
-            self.send_error(400, 'Incorrect JSON')
+            self.__response_error(400, 'Incorrect JSON')
         return content
 
     def __validate_command(self):
@@ -50,13 +56,15 @@ class MyServer(BaseHTTPRequestHandler):
         if 'action' in command:
             if command['action'] == 'take':
                 if not 'position' in command:
-                    self.send_error(400, 'No position specified')
+                    self.__response_error(400, 'No position specified')
                     self.can_continue = False
                 elif command['position'] >= 30 or command['position'] < 0:  # TODO get value from parking lot
-                        self.send_error(400, 'Incorrect position')
+                        self.__response_error(400, 'Incorrect position')
                         self.can_continue =  False
+            elif command['action'] != 'store':
+                self.__response_error(400, 'Unrecognized action')
         else:
-            self.send_error(400, 'Missing action')
+            self.__response_error(400, 'Missing action')
             self.can_continue = False
 
     def process_command(self):
@@ -83,12 +91,12 @@ class MyServer(BaseHTTPRequestHandler):
     
     def __validate_header_existance(self, headerName):
         if not headerName in self.headers:
-            self.send_error(400, 'Missing ' + headerName + ' header')
+            self.__response_error(400, 'Missing ' + headerName + ' header')
             self.can_continue = False
 
     def __validate_header_value(self, headerName, fun):
         if fun(self.headers[headerName]) == False:
-            self.send_error(400, 'Incorrect value of ' +
+            self.__response_error(400, 'Incorrect value of ' +
                             headerName + ' header')
             self.can_continue = False
 
