@@ -3,19 +3,48 @@ from uuid import UUID
 from queue import Queue
 import random
 import json
+from parkingLot import ParkingLot
 
-class MyServer(BaseHTTPRequestHandler):
+class ParkingServer(HTTPServer):
+    parking = ParkingLot()
     used_keys = []
-    allowed_commands = ['take', 'store']
-    can_continue = True
     validation_rules = {}
-
-    def __init__(self, request, client_address, server):
-        BaseHTTPRequestHandler.__init__(self, request, client_address, server)
+    def __init__(self, Host, handlerClass):
+        HTTPServer.__init__(self, Host, handlerClass)
         self.validation_rules = {
             'Content-type': lambda header: header == 'application/json',
             'Idempotency-Key': lambda header: self.__validate_idempotency_key(header)
         }
+
+    def __validate_idempotency_key(self, key):
+        valid = key not in self.used_keys and self.__is_valid_uuid(key)
+        if valid == True:
+            self.used_keys.append(key)
+        return valid
+
+    def __is_valid_uuid(self, uuid_to_test, version=4):
+        """
+        Check if uuid_to_test is a valid UUID.
+
+        Parameters
+        ----------
+        uuid_to_test : str
+        version : {1, 2, 3, 4}
+
+        Returns
+        -------
+        `True` if uuid_to_test is a valid UUID, otherwise `False`.
+        """
+        try:
+            uuid_obj = UUID(uuid_to_test, version=version)
+        except:
+            return False
+
+        return str(uuid_obj) == uuid_to_test
+
+class MyServer(BaseHTTPRequestHandler):
+    allowed_commands = ['take', 'store']
+    can_continue = True
 
     def __response_error(self, code, error_message):
         self.send_response(code)
@@ -30,6 +59,7 @@ class MyServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         print('GET')
+        print('Av:', self.server.parking.places_available())
         self.__validate_headers(['Idempotency-Key'])
         if not self.can_continue:
             return
@@ -72,9 +102,6 @@ class MyServer(BaseHTTPRequestHandler):
                 if not 'position' in command:
                     self.__response_error(400, 'No position specified')
                     self.can_continue = False
-                elif command['position'] >= 30 or command['position'] < 0:  # TODO get value from parking lot
-                        self.__response_error(400, 'Incorrect position')
-                        self.can_continue =  False
             elif command['action'] != 'store':
                 self.__response_error(400, 'Unrecognized action')
         else:
@@ -82,8 +109,21 @@ class MyServer(BaseHTTPRequestHandler):
             self.can_continue = False
 
     def process_command(self):
-        self.send_response(202)
-        self.end_headers()
+        if self.content['action'] == 'store':
+            try:
+                position = self.server.parking.store()
+                self.__response(202, {'Position': position})
+            except:
+                self.send_error(400, 'Parking lot is full')
+                return
+        elif self.content['action'] == 'take':
+            position = int(self.content['position'])
+            try:
+                self.server.parking.take(position)
+                self.__response(202)
+            except:
+                self.send_error(400, 'No car at position')
+                return
 
     def __validate_headers(self, headers):
         for header in headers:
@@ -94,7 +134,7 @@ class MyServer(BaseHTTPRequestHandler):
                     return
             self.__validate_header_value(
                 header,
-                self.validation_rules.get(header, lambda x : True)
+                self.server.validation_rules.get(header, lambda x : True)
             )
         if not self.can_continue:
             return
@@ -110,37 +150,13 @@ class MyServer(BaseHTTPRequestHandler):
                             headerName + ' header')
             self.can_continue = False
 
-    def __validate_idempotency_key(self, key):
-        return key not in self.used_keys and self.__is_valid_uuid(key)
-
-    def __is_valid_uuid(self, uuid_to_test, version=4):
-        """
-        Check if uuid_to_test is a valid UUID.
-
-        Parameters
-        ----------
-        uuid_to_test : str
-        version : {1, 2, 3, 4}
-
-        Returns
-        -------
-        `True` if uuid_to_test is a valid UUID, otherwise `False`.
-        """
-        try:
-            uuid_obj = UUID(uuid_to_test, version=version)
-        except:
-            return False
-
-        return str(uuid_obj) == uuid_to_test
-
     def __get_free_spaces(self):
-        # placeholder TODO get value from parking lot
-        return random.randint(0, 30)
+        return self.server.parking.places_available()
 
 hostName = ''
 hostPort = 4242
 
-myServer = HTTPServer((hostName, hostPort), MyServer)
+myServer = ParkingServer((hostName, hostPort), MyServer)
 print('Server Starts - %s:%s' % (hostName, hostPort))
 
 try:
