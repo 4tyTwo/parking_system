@@ -8,6 +8,14 @@ class MyServer(BaseHTTPRequestHandler):
     used_keys = []
     allowed_commands = ['take', 'store']
     can_continue = True
+    validation_rules = {}
+
+    def __init__(self, request, client_address, server):
+        BaseHTTPRequestHandler.__init__(self, request, client_address, server)
+        self.validation_rules = {
+            'Content-type': lambda header: header == 'application/json',
+            'Idempotency-Key': lambda header: self.__validate_idempotency_key(header)
+        }
 
     def __response_error(self, code, error_message):
         self.send_response(code)
@@ -22,14 +30,20 @@ class MyServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         print('GET')
-        self.__response(405)
+        self.__validate_headers(['Idempotency-Key'])
+        if not self.can_continue:
+            return
+        self.__response(200, {
+            'Free places': self.__get_free_spaces()
+        })
 
     def do_HEAD(self):
         print('HEAD')
         self.__response(405)
         
     def do_POST(self):
-        self.__validate_headers()
+        self.__validate_headers(
+            ['Content-type', 'Content-Length', 'Idempotency-Key'])
         if not self.can_continue:
             return
         self.content = self.get_content()
@@ -71,23 +85,19 @@ class MyServer(BaseHTTPRequestHandler):
         self.send_response(202)
         self.end_headers()
 
-    def __validate_headers(self):
-        for header in ['Content-type', 'Content-Length', 'Idempotency-Key']:
+    def __validate_headers(self, headers):
+        for header in headers:
             if not self.can_continue:
                 return
             self.__validate_header_existance(header)
-        if not self.can_continue:
-                return
-        self.__validate_header_value(
-            'Content-type',
-            lambda header: header == 'application/json'
-        )
+            if not self.can_continue:
+                    return
+            self.__validate_header_value(
+                header,
+                self.validation_rules.get(header, lambda x : True)
+            )
         if not self.can_continue:
             return
-        self.__validate_header_value(
-            'Idempotency-Key',
-            lambda header: self.__validate_idempotency_key(header)
-        )
     
     def __validate_header_existance(self, headerName):
         if not headerName in self.headers:
@@ -123,6 +133,9 @@ class MyServer(BaseHTTPRequestHandler):
 
         return str(uuid_obj) == uuid_to_test
 
+    def __get_free_spaces(self):
+        # placeholder TODO get value from parking lot
+        return random.randint(0, 30)
 
 hostName = ''
 hostPort = 4242
