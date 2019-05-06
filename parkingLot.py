@@ -2,18 +2,25 @@ class ParkingLot:
     """
     Represents projected 3 story parking structure with 30 places
     """
-    capacity = 30
-    lots = [False] * capacity # False - place is available, True - taken
+    capacity = 0
+    lots = [] # False - place is available, True - taken
+
+    def __init__(self):
+        self.capacity = 30
+        self.lots = [False] * self.capacity
 
     def store(self):
         """
         Stores vehicle inside the lot.
         Returns
         -------
-        Nothing if executed correctly, raises `exception` if there are no free spaces
+        position: `int`, if executed correctly, raises `exception` if there are no free spaces
         """
-        if self.places_avaiable() == 0:
+        if self.places_available() == 0:
             raise Exception('No places available')
+        position = self.__pick_place()
+        self.__do_strore(position)
+        return position
         
     def take(self, position):
         """
@@ -33,7 +40,7 @@ class ParkingLot:
         raise Exception('Incorrect position')
 
 
-    def places_avaiable(self):
+    def places_available(self):
         """
         Returns
         -------
