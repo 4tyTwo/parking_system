@@ -1,5 +1,6 @@
-from serial import Serial
-from queue import Queue
+import requests
+import http.client
+import uuid
 
 # System MUST be blocked while executing request
 
@@ -23,12 +24,50 @@ class Reader:
             # See above
             pass
 
+class ParkingClient:
+
+    def __init__(self, url, port):
+        self.url = url + ':' + str(port)
+        self.__generate_idempotency_key()
+
+    def __generate_idempotency_key(self):
+        self.idempotency_key = str(uuid.uuid4())
+
+    def __do_request(self, data):
+        resp = requests.post(self.url, json=data, headers={
+            'Idempotency-Key': self.idempotency_key})
+        self.__generate_idempotency_key()
+        return resp
+
+    def store(self):
+        try:
+            data = {'action': 'store'}
+            resp = self.__do_request(data)
+            print('Server rerturned:', resp.status_code) # TODO remove
+            print(resp.headers) # TODO remove
+            return resp
+        except:
+            print('Store returned error')
+            return None
+
+    def take(self, posititon):
+        try:
+            data = {
+                'action': 'take',
+                'position': posititon
+            }
+            resp = self.__do_request(data)
+            print('Server rerturned:', resp.status_code)  # TODO remove
+            print(resp.headers)  # TODO remove
+            return resp
+        except:
+            print('Take returned error')
+            return None
         
 
-# An example of serial communication, that will be used by the server
-ser = Serial('/dev/tty.usbmodem14201', 9600, timeout=5)
-while True:
-    message = bytes(input("Print message: "), 'UTF-8')
-    print("Sending message:", message)
-    print("Sent", ser.write(message), "bytes of data")
-    print("received message:", ser.readline().decode('UTF-8'), end='')
+# Example usage
+client = ParkingClient('http://127.0.0.1', 4242)
+client.store()  # 202
+client.take(5)  # 202
+client.take(40) # 400, Incorrect position
+client.take(-1) # 400, Incorrect position
