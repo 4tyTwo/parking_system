@@ -60,3 +60,58 @@ class ParkingLot:
     def __is_taken(self, position):
         return self.lots[position]
     
+class Encoder:
+    # Skeleton
+    elevator_engine1 = int()
+    elevator_engine2 = int()
+    rotation_engine1 = int()
+    rotation_engine2 = int()
+    picker_engine    = int()
+    """
+    Translates abstract store/take commands to concrete arduino engines commands
+    """
+    def elevator_vertical(self, value):
+        """
+        Moves elevator verticaly by value mm
+        Returns
+        -------
+        command_list: `[str]`
+        """
+        return []
+
+    def rotate_elevator(self, degree):
+        """
+        Rotates elevator by degree
+        positive degree is clockwise, negative is couner-clockwise
+        Returns
+        -------
+        command_list: `[str]`
+        """
+        return []
+    
+    def place_car(self):
+        """
+        Places car from elevator to place
+        Returns
+        -------
+        command_list: `[str]`
+        """
+        
+        return []
+    
+    def take_car(self):
+        """
+        Take car from place on elevator
+        Returns
+        -------
+        command_list: `[str]`
+        """
+        return []
+
+    def mm_to_rotation_time(self):
+        """
+        Transforms distance values to engine rotation_time
+        Returns
+        -------
+        rotation_time: 'int'
+        """
