@@ -4,8 +4,6 @@ from queue import Queue
 import random
 import json
 from parkingLot import ParkingLot
-import logging
-import traceback
 
 class ParkingServer(HTTPServer):
     parking = ParkingLot()
