@@ -1,3 +1,5 @@
+from serial import Serial
+
 class ParkingLot:
     """
     Represents projected 3 story parking structure with 30 places
@@ -115,3 +117,30 @@ class Encoder:
         -------
         rotation_time: 'int'
         """
+
+class Commander:
+    """
+    Commander sends commands to given serial device
+    """
+
+    device = None
+    __buffer_size = 64 # Arduino Uno's default buffer size
+
+    def __init__(self, device_path, bitrate = 9600, timeout = 5):
+        self.device = Serial(device_path, bitrate, timeout=timeout)
+
+    def write(self, message):
+        if len(msg) <= self.__buffer_size:
+            msg = bytes(message, 'UTF-8')
+            self.device.write(message)
+            # waiting for OK from arduino
+            if self.device.readline().decode('UTF-8') == 'OK':
+                return
+            else:
+                raise Exception('Arduino didn\'t respond in time')
+        else:
+            raise Exception('Buffer limit exceeded')
+
+    def write_commands(self, message_list):
+        for message in message_list:
+            self.write(message)
