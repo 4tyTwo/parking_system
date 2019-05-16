@@ -3,7 +3,7 @@ from uuid import UUID
 from queue import Queue
 import random
 import json
-from parkingLot import ParkingLot
+from parkingLot import ParkingLot, Commander
 
 class ParkingServer(HTTPServer):
     parking = ParkingLot()

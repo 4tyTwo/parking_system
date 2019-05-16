@@ -1,12 +1,18 @@
+from serial import Serial
+
 class ParkingLot:
     """
     Represents projected 3 story parking structure with 30 places
     """
+    commander = None
     capacity = 0
     lots = [] # False - place is available, True - taken
+    encoder = None
 
     def __init__(self):
         self.capacity = 30
+        self.commander = Commander('/dev/tty.usbmodem14201', 9600, 5)
+        self.encoder = Encoder()
         self.lots = [False] * self.capacity
 
     def store(self):
@@ -20,6 +26,7 @@ class ParkingLot:
             raise Exception('No places available')
         position = self.__pick_place()
         self.__do_strore(position)
+        self.commander.write_commands(self.encoder.elevator_vertical(4076))
         return position
         
     def take(self, position):
@@ -62,11 +69,6 @@ class ParkingLot:
     
 class Encoder:
     # Skeleton
-    elevator_engine1 = int()
-    elevator_engine2 = int()
-    rotation_engine1 = int()
-    rotation_engine2 = int()
-    picker_engine    = int()
     """
     Translates abstract store/take commands to concrete arduino engines commands
     """
@@ -77,7 +79,7 @@ class Encoder:
         -------
         command_list: `[str]`
         """
-        return []
+        return ['elev ' + str(value)]
 
     def rotate_elevator(self, degree):
         """
@@ -115,3 +117,30 @@ class Encoder:
         -------
         rotation_time: 'int'
         """
+
+class Commander:
+    """
+    Commander sends commands to given serial device
+    """
+
+    device = None
+    __buffer_size = 64 # Arduino Uno's default buffer size
+
+    def __init__(self, device_path, bitrate = 9600, timeout = 5):
+        self.device = Serial(device_path, bitrate, timeout=timeout)
+
+    def write(self, message):
+        if len(message) <= self.__buffer_size:
+            msg = bytes(message, 'UTF-8')
+            self.device.write(msg)
+            # waiting for OK from arduino
+            if self.device.readline().decode('UTF-8') == 'OK\r\n':
+                return
+            else:
+                raise Exception('Arduino didn\'t respond in time')
+        else:
+            raise Exception('Buffer limit exceeded')
+
+    def write_commands(self, message_list):
+        for message in message_list:
+            self.write(message)
