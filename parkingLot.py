@@ -2,16 +2,18 @@ from serial import Serial
 
 class ParkingLot:
     """
-    Represents projected 3 story parking structure with 30 places
+    Represents projected 3 story parking structure with 23 places
     """
     commander = None
+    commanderBlueooth = None
     capacity = 0
     lots = [] # False - place is available, True - taken
     encoder = None
 
-    def __init__(self):
-        self.capacity = 30
-        self.commander = Commander('/dev/tty.usbmodem14201', 9600, 5)
+    def __init__(self, device1, device2):
+        self.capacity = 23
+        self.commander = Commander(device1, 9600, 5)  # elevator
+        self.commanderBlueooth = Commander(device2, 9600, 5)   # platform
         self.encoder = Encoder()
         self.lots = [False] * self.capacity
 
@@ -26,7 +28,8 @@ class ParkingLot:
             raise Exception('No places available')
         position = self.__pick_place()
         self.__do_strore(position)
-        self.commander.write_commands(self.encoder.elevator_vertical(4076))
+        self.commander.write_commands(self.encoder.elevator_vertical(self.__floor(position)))
+        self.commanderBlueooth.write(self.encoder.rotate_elevator(90) + self.encoder.place_car())
         return position
         
     def take(self, position):
@@ -67,8 +70,14 @@ class ParkingLot:
     def __is_taken(self, position):
         return self.lots[position]
     
+    def __floor(self, position):
+        return int(position / 3) + 1
+
 class Encoder:
     # Skeleton
+    full_rotation = 2076 # steps
+    step_per_degree = full_rotation / 360
+
     """
     Translates abstract store/take commands to concrete arduino engines commands
     """
@@ -79,7 +88,7 @@ class Encoder:
         -------
         command_list: `[str]`
         """
-        return ['elev ' + str(value)]
+        return [str(value) * self.full_rotation]
 
     def rotate_elevator(self, degree):
         """
@@ -89,8 +98,11 @@ class Encoder:
         -------
         command_list: `[str]`
         """
-        return []
+        return ['rot' + str(self.step_per_degree * degree)]
     
+    def rotate_position(self, positions):
+        return ['rot ' + str(positions)]
+
     def place_car(self):
         """
         Places car from elevator to place
@@ -99,24 +111,25 @@ class Encoder:
         command_list: `[str]`
         """
         
-        return []
+        return ['push 1300', 'push -1300']
     
-    def take_car(self):
+    def push_car(self):
         """
-        Take car from place on elevator
+        Push car from elevator
         Returns
         -------
         command_list: `[str]`
         """
-        return []
-
-    def mm_to_rotation_time(self):
+        return ['push 1300']
+    
+    def pull_car(self):
         """
-        Transforms distance values to engine rotation_time
+        Pull car on elevator
         Returns
         -------
-        rotation_time: 'int'
+        command_list: `[str]`
         """
+        return ['push -1300']
 
 class Commander:
     """
@@ -132,10 +145,19 @@ class Commander:
     def write(self, message):
         if len(message) <= self.__buffer_size:
             msg = bytes(message, 'UTF-8')
+            self.device.timeout = 5
             self.device.write(msg)
             # waiting for OK from arduino
+            # OK means that board accepted command
+            outp = self.device.readline().decode('UTF-8')
+            print("Response:", outp)
+            self.device.close()
             if self.device.readline().decode('UTF-8') == 'OK\r\n':
-                return
+                self.device.timeout = 30
+                if self.device.readline().decode('UTF-8') == 'DONE\r\n':
+                    return
+                else:
+                    raise Exception('No Done')
             else:
                 raise Exception('Arduino didn\'t respond in time')
         else:
