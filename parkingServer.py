@@ -94,7 +94,7 @@ class MyServer(BaseHTTPRequestHandler):
         return self.get_content()
 
     def __process_GET(self):
-        return 200, {'Free places': self.__get_free_spaces()}
+        return 200, {'Places': self.__get_free_spaces()}
 
     def get_content(self):
         content_length = int(self.headers['Content-Length'])

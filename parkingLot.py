@@ -27,9 +27,9 @@ class ParkingLot:
         if self.places_available() == 0:
             raise Exception('No places available')
         position = self.__pick_place()
-        self.__do_strore(position)
         self.commander.write_commands(self.encoder.elevator_vertical(self.__floor(position)))
         self.commanderBlueooth.write(self.encoder.rotate_elevator(90) + self.encoder.place_car())
+        self.__do_store(position)
         return position
         
     def take(self, position):
@@ -61,7 +61,7 @@ class ParkingLot:
     def __pick_place(self):
         return self.lots.index(False) # TODO balancing
 
-    def __do_strore(self, position):
+    def __do_store(self, position):
         self.lots[position] = True
     
     def __do_take(self, position):
@@ -149,17 +149,16 @@ class Commander:
             self.device.write(msg)
             # waiting for OK from arduino
             # OK means that board accepted command
-            outp = self.device.readline().decode('UTF-8')
-            print("Response:", outp)
-            self.device.close()
-            if self.device.readline().decode('UTF-8') == 'OK\r\n':
-                self.device.timeout = 30
-                if self.device.readline().decode('UTF-8') == 'DONE\r\n':
-                    return
-                else:
-                    raise Exception('No Done')
-            else:
-                raise Exception('Arduino didn\'t respond in time')
+
+            # Commented out for the ease of communication
+            # if self.device.readline().decode('UTF-8') == 'OK\r\n':
+            #     self.device.timeout = 30
+            #     if self.device.readline().decode('UTF-8') == 'DONE\r\n':
+            #         return
+            #     else:
+            #         raise Exception('No Done')
+            # else:
+            #     raise Exception('Arduino didn\'t respond in time')
         else:
             raise Exception('Buffer limit exceeded')
 
