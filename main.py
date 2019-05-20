@@ -44,6 +44,8 @@ class Reader:
             return 'An error occured, try again'
         if 'Error' in result.headers:
             return 'Error: ' + result.headers['Error']
+        if 'Position' in result.headers:
+            return 'Car position: ' + str(result.headers['Position'])
         if result.status_code == 202:
             return 'Accepted'
         elif result.status_code == 200:
