@@ -6,11 +6,12 @@ import json
 from parkingLot import ParkingLot, Commander
 
 class ParkingServer(HTTPServer):
-    parking = ParkingLot()
+    parking = None
     used_keys = []
     validation_rules = {}
-    def __init__(self, Host, handlerClass):
+    def __init__(self, Host, handlerClass, device1, device2):
         HTTPServer.__init__(self, Host, handlerClass)
+        self.parking = ParkingLot(device1, device2)
         self.validation_rules = {
             'Content-type': lambda header: header == 'application/json',
             'Idempotency-Key': lambda header: self.__validate_idempotency_key(header)
@@ -155,7 +156,8 @@ class MyServer(BaseHTTPRequestHandler):
 hostName = ''
 hostPort = 4242
 
-myServer = ParkingServer((hostName, hostPort), MyServer)
+myServer = ParkingServer((hostName, hostPort),
+                         MyServer, '/dev/tty.usbmodem14101', '/ dev/tty.HC-06-SPPDev')
 print('Server Starts - %s:%s' % (hostName, hostPort))
 
 try:
