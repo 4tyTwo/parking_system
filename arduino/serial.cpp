@@ -29,7 +29,6 @@ void loop()
     }
 }
 
-/*
 
 const int line_sensor = 1; 
  
@@ -50,4 +49,3 @@ void loop() {
   delay(500); // задержка в 500 мс
 }
 
-*/
