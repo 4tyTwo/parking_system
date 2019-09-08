@@ -7,7 +7,7 @@ int in4Pin = 11;
 
 int incomingByte;
 
-Stepper motor(512, in1Pin, in2Pin, in3Pin, in4Pin); // �������� ������ ���
+Stepper motor(512, in1Pin, in2Pin, in3Pin, in4Pin); // Âðàùåíèå âîêðóã îñè
 
 void setup()
 {
@@ -28,3 +28,26 @@ void loop()
 
     }
 }
+
+/*
+
+const int line_sensor = 1; 
+ 
+void setup() {
+  Serial.begin(9600); // инициализация Serial-порта
+ 
+}
+ 
+void loop() {
+  bool isLine = digitalRead(line_sensor); 
+  if (isLine) { //если это линия, 
+    Serial.println("There is line"); 
+	// команды движения
+  }
+  else { // если линии нет
+    Serial.println("There is no line"); // сообщить и об этом
+  }
+  delay(500); // задержка в 500 мс
+}
+
+*/
