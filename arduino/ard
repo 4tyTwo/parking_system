@@ -1,0 +1,89 @@
+#include <Stepper.h>
+
+//входы двигателя 1 и 2
+int in1Pin = 8;
+int in2Pin = 9;
+int in3Pin = 10;
+int in4Pin = 11;
+
+int in1Pin2 = 2;
+int in2Pin2 = 3;
+int in3Pin2 = 4;
+int in4Pin2 = 5;
+
+int incomingByte;
+
+//новый экземпляр класса Stepper, ассоциируемый с определенным шаговым двигателем
+Stepper motor (512, in1Pin, in2Pin, in3Pin, in4Pin);
+Stepper motor2(512, in1Pin2, in2Pin2, in3Pin2, in4Pin2); 
+
+void setup () {
+	//установка режима работы заданного pin как входа или как выхода
+	pinMode(in1Pin, OUTPUT);
+    pinMode(in2Pin, OUTPUT);
+    pinMode(in3Pin, OUTPUT);
+    pinMode(in4Pin, OUTPUT);
+    pinMode(in1Pin2, OUTPUT);
+    pinMode(in2Pin2, OUTPUT);
+    pinMode(in3Pin2, OUTPUT);
+    pinMode(in4Pin2, OUTPUT);
+	//инициирует последовательное соединение и задает скорость передачи данных в бит/c
+    Serial.begin(9600);
+	//установка скорости вращения
+    motor.setSpeed(40);
+    motor2.setSpeed(40);
+}
+
+void loop() {
+	if (Serial.available() > 0) {
+		incomingByte = Serial.parseInt();
+		Serial.println(incomingByte);
+		motor.step(incomingByte * 500); //шаг этажа
+		motor2.step(incomingByte * 200); //шаг платформы
+	}
+}
+
+////////////////////////////////
+
+const int line_sensor = 1;
+const bool fl;
+int floor = 1;
+int floor_cur = 1;
+int floor_steps = 0;
+
+void setup() {
+	isFloor = digitalRead(line_sensor);
+	if (isFloor) {
+		Serial.println("There is floor");
+		fl = true;
+	}
+	else {
+		Serial.println("Moving...");
+		fl = false;
+	}
+	delay(500);
+}
+ 
+void loop() {
+	if (Serial.available() > 0) {
+		floor = Serial.parseInt();
+		Serial.println(floor);
+	}
+	
+	if (floor - floor_cur> 0) {
+		while (isFloor() and floor_steps!= floor - floor_cur) {
+		motor.step(10); 
+		motor2.step(10);
+		floor_steps++;
+		};
+		floor_cur = floor;
+	} else {
+			while (isFloor() and floor_steps!= floor - floor_cur) {
+		motor.step(-10); 
+		motor2.step(-10);
+		floor_steps++;
+		};
+		floor_cur = floor;
+	}
+}
+		
